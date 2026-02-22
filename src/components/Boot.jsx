@@ -90,6 +90,29 @@ export default function Boot({ children }) {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
+	useEffect(() => {
+		// If user has no profile, always force them onto /new-user
+		if (
+			!loading &&
+			session &&
+			!profile &&
+			!(loc.pathname === "/new-user" || loc.pathname === "/info")
+		) {
+			nav("/new-user", {
+				replace: true,
+				state: { from: loc.pathname + loc.search },
+			});
+			return;
+		}
+
+		// If user already has profile, keep them out of /new-user
+		if (!loading && session && profile && loc.pathname === "/new-user") {
+			const from = loc.state?.from || "/";
+			nav(from, { replace: true });
+		}
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [loc.pathname, loc.search, loading, session, profile]);
+
 	const value = useMemo(
 		() => ({
 			session,
@@ -103,7 +126,7 @@ export default function Boot({ children }) {
 				setProfile(p);
 			},
 		}),
-		[session, profile, loading, bootError]
+		[session, profile, loading, bootError],
 	);
 
 	if (loading) {
