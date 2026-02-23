@@ -11,9 +11,9 @@ function formatCountdown(expiresAtIso) {
 	const clamped = Math.max(0, ms);
 	let totalSec = Math.floor(clamped / 1000);
 
-	if (totalSec == 60 * 60) {
-		totalSec -= 1;
-	}
+	// if (totalSec == 60 * 60) {
+	// 	totalSec -= 1;
+	// }
 
 	let h = Math.floor(Math.floor(totalSec / 60) / 60);
 	const m = Math.floor(totalSec / 60) % 60;
@@ -35,6 +35,7 @@ export default function ResourcePage() {
 	const [claimMinutes, setClaimMinutes] = useState(String(MAX_CLAIM_MINUTES));
 	const [message, setMessage] = useState("");
 	const [busy, setBusy] = useState(false);
+	const [refreshing, setRefreshing] = useState(false);
 
 	// local ticking display
 	const [forceTickVal, forceTick] = useState(0);
@@ -72,6 +73,18 @@ export default function ResourcePage() {
 		addRecentResource({ id: data.id, name: data.name });
 	}
 
+	async function onRefresh() {
+		setRefreshing(true);
+		setErr("");
+		try {
+			await fetchResource();
+		} catch (ex) {
+			setErr(ex?.message || "Failed to refresh");
+		} finally {
+			setRefreshing(false);
+		}
+	}
+
 	useEffect(() => {
 		let cancelled = false;
 
@@ -92,31 +105,31 @@ export default function ResourcePage() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [id]);
 
-	// Subscribe to realtime changes for this resource
-	useEffect(() => {
-		if (channelRef.current) {
-			supabase.removeChannel(channelRef.current);
-			channelRef.current = null;
-		}
+	// // Subscribe to realtime changes for this resource
+	// useEffect(() => {
+	// 	if (channelRef.current) {
+	// 		supabase.removeChannel(channelRef.current);
+	// 		channelRef.current = null;
+	// 	}
 
-		const ch = supabase
-			.channel(`resource:${id}`)
-			.on("broadcast", { event: "resource_updated" }, () => {
-				fetchResource().catch(() => {});
-			})
-			.subscribe((status) => {
-				// optional debug
-				// console.log("channel status:", status);
-			});
+	// 	const ch = supabase
+	// 		.channel(`resource:${id}`)
+	// 		.on("broadcast", { event: "resource_updated" }, () => {
+	// 			fetchResource().catch(() => {});
+	// 		})
+	// 		.subscribe((status) => {
+	// 			// optional debug
+	// 			// console.log("channel status:", status);
+	// 		});
 
-		channelRef.current = ch;
+	// 	channelRef.current = ch;
 
-		return () => {
-			if (ch) supabase.removeChannel(ch);
-			channelRef.current = null;
-		};
-		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [id]);
+	// 	return () => {
+	// 		if (ch) supabase.removeChannel(ch);
+	// 		channelRef.current = null;
+	// 	};
+	// 	// eslint-disable-next-line react-hooks/exhaustive-deps
+	// }, [id]);
 
 	// local timer tick (for countdown display)
 	useEffect(() => {
@@ -251,7 +264,25 @@ export default function ResourcePage() {
 			<div className="card bg-base-100 shadow min-w-md">
 				<div className="card-body">
 					<div className="flex items-start justify-between gap-4">
-						<div>
+						<div className="flex items-center gap-2">
+							<button
+								className="btn btn-ghost btn-sm btn-circle"
+								onClick={onRefresh}
+								disabled={refreshing || busy}
+								title="Refresh"
+								aria-label="Refresh"
+							>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									height="24px"
+									viewBox="0 -960 960 960"
+									width="24px"
+									fill="#1f1f1f"
+								>
+									<path d="M480-160q-134 0-227-93t-93-227q0-134 93-227t227-93q69 0 132 28.5T720-690v-110h80v280H520v-80h168q-32-56-87.5-88T480-720q-100 0-170 70t-70 170q0 100 70 170t170 70q77 0 139-44t87-116h84q-28 106-114 173t-196 67Z" />
+								</svg>
+							</button>
+
 							<h1 className="card-title">{resource.name}</h1>
 						</div>
 						<button
